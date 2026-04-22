@@ -6,12 +6,11 @@ from hal import make_hal
 from adapters import make_tx16_adapter
 
 # Constants
-PWM_PINS = [12, 13]
 
 # Hardware
 setup, cleanup, update_switch, set_pwm_duty_cycle = make_hal({
     'switches_pins': [17, 27, 22, 23, 26],
-    'pwm_pins': PWM_PINS
+    'pwm_pins': [12, 13]
 })
 
 def make_pwm_sender(pin_index):
@@ -21,10 +20,10 @@ def make_pwm_sender(pin_index):
     return send
 
 # State
-handle_tx16_event, get_tx16_state = make_tx16_adapter(update_switch, {
-    'LEFT_X':  make_pwm_sender(0),
-    # 'LEFT_Y':  make_pwm_sender(0),
-    'RIGHT_X': make_pwm_sender(1),
+handle_tx16_message, get_tx16_state = make_tx16_adapter(update_switch, {
+    # 'LEFT_X':  make_pwm_sender(0),
+    'LEFT_Y':  make_pwm_sender(0),
+    # 'RIGHT_X': make_pwm_sender(0),
     # 'RIGHT_Y': make_pwm_sender(1),
 })
 
@@ -46,7 +45,7 @@ def loop():
             print('Invalid JSON: ', line, file=sys.stderr)
             continue
 
-        handle_tx16_event(data)
+        handle_tx16_message(data)
 
 # Entry point
 def main():
