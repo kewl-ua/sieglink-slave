@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Hardware Abstraction Layer
 
-import RPi.GPIO as GPIO
+import pigpio
 import time
 
 
@@ -9,44 +9,46 @@ def make_hal(pins):
     switch_pins = pins['switches_pins']
     pwm_pins = pins['pwm_pins']
 
-    pwm_instances = {}
+    PWM_FREQUENCY_HZ = 50
+    PWM_PERIOD_US = 1_000_000 // PWM_FREQUENCY_HZ  # 20 000 мкс
+
+    pi = pigpio.pi()
 
     def setup():
-        GPIO.setmode(GPIO.BCM)
-
         for pin in switch_pins:
-            GPIO.setup(pin, GPIO.OUT)
+            pi.set_mode(pin, pigpio.OUTPUT)
+            pi.write(pin, 0)
 
         for pin in pwm_pins:
-            GPIO.setup(pin, GPIO.OUT)
-            pwm_instances[pin] = GPIO.PWM(pin, 50)
-            pwm_instances[pin].start(0)
+            pi.set_mode(pin, pigpio.OUTPUT)
+            pi.set_PWM_frequency(pin, PWM_FREQUENCY_HZ)
+            pi.set_servo_pulsewidth(pin, 0)
 
     def cleanup():
-        for pwm in pwm_instances.values():
-            pwm.stop()
-        GPIO.cleanup()
+        for pin in pwm_pins:
+            pi.set_servo_pulsewidth(pin, 0)
+        pi.stop()
 
     def update_switch(switch_index, state):
         pin = switch_pins[switch_index - 1]
-        if state:
-            print(f'Setting pin {pin} to HIGH')
-            GPIO.output(pin, GPIO.HIGH)
-        else:
-            GPIO.output(pin, GPIO.LOW)
+        pi.write(pin, 1 if state else 0)
 
-    def set_pwm_duty_cycle(pin_index, value):
+    SERVO_MIN_US = 500
+    SERVO_MAX_US = 2500
+
+    def set_pwm(pin_index, pulse_width_us):
         pin = pwm_pins[pin_index]
-        pwm_instances[pin].ChangeDutyCycle(value)
+        pw = max(SERVO_MIN_US, min(SERVO_MAX_US, pulse_width_us + SERVO_MIN_US))
+        pi.set_servo_pulsewidth(pin, pw)
 
-    return setup, cleanup, update_switch, set_pwm_duty_cycle
+    return setup, cleanup, update_switch, set_pwm
 
 
 # Test
 def test():
-    setup, cleanup, update_switch, set_pwm_duty_cycle = make_hal({
+    setup, cleanup, update_switch, set_pwm = make_hal({
         'switches_pins': [17, 27, 22, 23, 26],
-        'pwm_pins': [12, 13]
+        'pwm_pins': [12, 13],
     })
     setup()
 
@@ -54,6 +56,13 @@ def test():
         update_switch(i, True)
         time.sleep(1)
         update_switch(i, False)
+
+    cleanup()
+
+
+if __name__ == '__main__':
+    test()
+
 
     cleanup()
 
