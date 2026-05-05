@@ -1,0 +1,2 @@
+#!/usr/bin/bash
+ip addr | grep inet6 | head -n 3 | sort -r | head -n 1 | awk '{print $2}'

@@ -1,0 +1,17 @@
+[Unit]
+Description=Sieglink Slave (UDP -> main.py)
+After=network.target wg-quick@wg0.service pigpiod.service
+Requires=wg-quick@wg0.service pigpiod.service
+
+[Service]
+User=root
+WorkingDirectory=/home/kewl/Code/sieglink-slave
+ExecStartPre=/usr/local/bin/wait_wireguard.sh
+ExecStart=/bin/bash -c 'socat -u UDP-RECV:5000,reuseaddr EXEC:"python3 main.py"'
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
+
